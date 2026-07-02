@@ -1,8 +1,30 @@
+# Virtual environment
 .venv/
-.pytest_cache/
+
+# Python cache
 __pycache__/
 *.py[cod]
-*.egg-info/
-data/
+
+# Test artifacts
+.pytest_cache/
 .tmp/
+
+# Packaging
+*.egg-info/
+build/
+dist/
+
+# Database
+data/*.db
+data/*.sqlite
+
+# Secrets
 .env
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
