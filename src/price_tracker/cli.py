@@ -8,6 +8,7 @@ from price_tracker.alerts.email import EmailAlert
 from price_tracker.alerts.service import NotificationService
 from price_tracker.adapters.ergobaby import ErgobabyAdapter
 from price_tracker.adapters.fake import FakeAdapter, fake_transport
+from price_tracker.adapters.woolino import WoolinoAdapter
 from price_tracker.config.loader import ConfigError, load_catalog, load_settings
 from price_tracker.database.storage import PriceStorage
 from price_tracker.models.price import PriceData
@@ -111,7 +112,11 @@ def run(argv: Sequence[str] | None = None) -> int:
             notification_service = None
         results = PriceChecker(
             storage,
-            {"ergobaby": ErgobabyAdapter(), "fake": FakeAdapter()},
+            {
+                "ergobaby": ErgobabyAdapter(),
+                "fake": FakeAdapter(),
+                "woolino": WoolinoAdapter(),
+            },
             http_client,
             notification_service,
             settings.default_notification_threshold,

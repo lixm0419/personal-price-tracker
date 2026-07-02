@@ -34,3 +34,15 @@ products:
     stores:
       ergobaby:
         url: "https://ergobaby.com/en-us/products/omni-deluxe-baby-carrier"
+
+  - name: Woolino 4 Season Ultimate Baby Sleep Bag
+    category: baby
+    enabled: true
+    notification_threshold: null
+    option_strategy: lowest_price
+    options:
+      size: any
+      color: any
+    stores:
+      woolino:
+        url: "https://www.woolino.com/products/4-season-baby-sleep-bag-merino-wool-2-months-2-years-nightsky"

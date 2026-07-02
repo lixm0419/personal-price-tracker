@@ -2,8 +2,8 @@
 
 Phase 1 is a category-agnostic, YAML-configured price tracker with a fake
 adapter for local development. It stores every successful check in SQLite.
-Ergobaby and deterministic fake adapters are included. Discount alerts can be
-sent by email.
+Ergobaby, Woolino, and deterministic fake adapters are included. Discount
+alerts can be sent by email.
 
 ## Install
 
@@ -81,6 +81,11 @@ other checks.
 Shopify variant data. It performs no networking. `PriceChecker` uses the shared
 client to download the configured URL before calling the parser. Parser tests
 use saved HTML under `tests/fixtures/ergobaby/` and never contact the live site.
+
+`WoolinoAdapter` parses Woolino's static JSON-LD offers and embedded Shopify
+variant JSON. It supports the same configured option strategies and likewise
+performs no networking. Its parser tests use saved HTML under
+`tests/fixtures/woolino/`.
 
 To add another store URL to an existing product, add another key beneath its
 `stores` mapping:
