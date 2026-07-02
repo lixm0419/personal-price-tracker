@@ -1,0 +1,36 @@
+products:
+  - name: Example Baby Wipes
+    category: baby
+    enabled: true
+    notification_threshold: null
+    option_strategy: lowest_price
+    options:
+      package_size: any
+      fragrance: any
+    stores:
+      fake:
+        url: "fake://baby-wipes?original=29.99&current=24.99&available=true&currency=USD"
+
+  - name: Example Coffee Beans
+    category: grocery
+    enabled: false
+    notification_threshold: 15
+    option_strategy: specific_options
+    options:
+      weight: "1 lb"
+      roast: medium
+    stores:
+      fake:
+        url: "fake://coffee-beans?original=18.00&current=15.00&available=true&currency=USD"
+
+  - name: Ergobaby Omni Deluxe Mesh Baby Carrier
+    category: baby
+    enabled: true
+    notification_threshold: null
+    option_strategy: lowest_price
+    options:
+      fabric: Mesh
+      color: any
+    stores:
+      ergobaby:
+        url: "https://ergobaby.com/en-us/products/omni-deluxe-baby-carrier"

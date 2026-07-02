@@ -1,0 +1,2 @@
+"""Personal shopping price tracker."""
+

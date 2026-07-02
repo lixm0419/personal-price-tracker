@@ -1,0 +1,13 @@
+default_notification_threshold: 10
+database_path: data/prices.db
+logging_level: INFO
+
+email:
+  enabled: false
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  username_env: PRICE_TRACKER_EMAIL_USERNAME
+  password_env: PRICE_TRACKER_EMAIL_PASSWORD
+  sender: lixm0419@gmail.com
+  recipient: lixm0419@gmail.com
+  use_tls: true
