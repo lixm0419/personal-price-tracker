@@ -39,9 +39,15 @@ jobs:
             price-tracker-data-
 
       - name: Check prices
-        run: python -m price_tracker check
+        run: |
+          set -o pipefail
+          python -m price_tracker check --verbose 2>&1 | tee price-check.log
         env:
           PRICE_TRACKER_EMAIL_USERNAME: ${{ secrets.PRICE_TRACKER_EMAIL_USERNAME }}
           PRICE_TRACKER_EMAIL_PASSWORD: ${{ secrets.PRICE_TRACKER_EMAIL_PASSWORD }}
           PRICE_TRACKER_EMAIL_SENDER: ${{ secrets.PRICE_TRACKER_EMAIL_SENDER }}
           PRICE_TRACKER_EMAIL_RECIPIENT: ${{ secrets.PRICE_TRACKER_EMAIL_RECIPIENT }}
+
+      - name: Write daily report
+        if: always()
+        run: bash .github/scripts/write-job-summary.sh price-check.log

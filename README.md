@@ -154,6 +154,10 @@ can also be started manually from the Actions tab. It installs the package,
 restores the SQLite history cache, and runs `python -m price_tracker check`
 with those four secrets mapped into the process environment. The history cache
 preserves duplicate-notification state between ephemeral Actions runners.
+Each run also publishes a Markdown **Price Tracker Daily Report** in the GitHub
+Actions Job Summary with execution totals plus sent or failed product names
+when applicable. The report is generated from the existing verbose CLI output;
+the application contains no GitHub Actions-specific behavior.
 
 To send scheduled alerts, set `email.enabled: true` in
 `config/settings.yaml`. Leave it false if the workflow should record checks
@@ -190,6 +194,18 @@ the threshold, availability, duplicate history, or missing email
 configuration. Sendable entries include the URL and tied variants when ties
 exist, followed by a checked/would-notify/skipped summary. Dry runs never send
 email or record a notification as sent.
+
+For concise local output, run `python -m price_tracker check`. It prints one
+line per successful check followed by totals for attempts, successes,
+notifications, skip categories, and errors. Add `--verbose` to include the
+notification decision and reason for every successful product/store check:
+
+```powershell
+python -m price_tracker check --verbose
+```
+
+The scheduled GitHub Actions workflow uses verbose mode so its logs explain
+threshold, duplicate, availability, and configuration skips.
 
 ## Run tests
 

@@ -12,7 +12,11 @@ from price_tracker.adapters.woolino import WoolinoAdapter
 from price_tracker.config.loader import ConfigError, load_catalog, load_settings
 from price_tracker.database.storage import PriceStorage
 from price_tracker.models.price import PriceData
-from price_tracker.services.checker import PriceChecker
+from price_tracker.services.checker import (
+    CheckStats,
+    NotificationDecision,
+    PriceChecker,
+)
 from price_tracker.utils.http_client import HttpClient
 
 LOGGER = logging.getLogger(__name__)
@@ -47,6 +51,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print qualifying notifications without sending email",
     )
+    check.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show notification decisions for every successful check",
+    )
     subparsers.add_parser(
         "send-test-email",
         help="Send a test message using configured SMTP settings",
@@ -67,6 +76,44 @@ def _describe(price: PriceData) -> str:
     if price.tied_variants:
         description += f" | tied lowest with: {', '.join(price.tied_variants)}"
     return description
+
+
+def _describe_decision(decision: NotificationDecision) -> str:
+    price = decision.price
+    lines = [
+        f"Product: {decision.product.name}",
+        f"Store: {price.store}",
+        "Selected variant/options: "
+        f"{price.selected_variant or 'Not specified'}",
+        f"Current price: {price.currency} {price.current_price}",
+        f"Original price: {price.currency} {price.original_price}",
+        f"Discount: {price.discount_percent}%",
+        f"Notification: {'SENT' if decision.sent else 'SKIPPED'}",
+    ]
+    if decision.reason:
+        lines.append(f"Reason: {decision.reason}")
+    return "\n".join(lines)
+
+
+def _summary(stats: CheckStats) -> str:
+    lines = [
+        "=" * 40,
+        "Summary",
+        "",
+        f"Products checked: {stats.products_checked}",
+        f"Successful checks: {stats.successful_checks}",
+        f"Notifications sent: {stats.notifications_sent}",
+        f"Skipped (duplicate): {stats.skipped('duplicate')}",
+        f"Skipped (threshold): {stats.skipped('threshold')}",
+    ]
+    unavailable = stats.skipped("unavailable")
+    configuration = stats.skipped("configuration")
+    if unavailable:
+        lines.append(f"Skipped (unavailable): {unavailable}")
+    if configuration:
+        lines.append(f"Skipped (configuration): {configuration}")
+    lines.extend((f"Errors: {stats.errors}", "=" * 40))
+    return "\n".join(lines)
 
 
 def run(argv: Sequence[str] | None = None) -> int:
@@ -131,7 +178,7 @@ def run(argv: Sequence[str] | None = None) -> int:
             )
         else:
             notification_service = None
-        results = PriceChecker(
+        checker = PriceChecker(
             storage,
             {
                 "ergobaby": ErgobabyAdapter(),
@@ -141,13 +188,17 @@ def run(argv: Sequence[str] | None = None) -> int:
             http_client,
             notification_service,
             settings.default_notification_threshold,
-        ).check(catalog)
+        )
+        results = checker.check(catalog)
         if args.dry_run_notifications:
             notification_service.report_summary()
         else:
             for result in results:
                 LOGGER.info("%s", _describe(result))
-        LOGGER.info("Stored %d successful price check(s)", len(results))
+            if args.verbose:
+                for decision in checker.last_stats.decisions:
+                    LOGGER.info("\n%s", _describe_decision(decision))
+        LOGGER.info("\n%s", _summary(checker.last_stats))
         return 0
 
     if args.limit < 1:

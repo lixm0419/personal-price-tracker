@@ -59,7 +59,10 @@ def test_cli_commands(tmp_path, caplog):
     caplog.clear()
 
     assert run([*common, "check"]) == 0
-    assert "Stored 1 successful price check(s)" in caplog.text
+    assert "Products checked: 1" in caplog.text
+    assert "Successful checks: 1" in caplog.text
+    assert "Notifications sent: 0" in caplog.text
+    assert "Errors: 0" in caplog.text
     caplog.clear()
 
     assert run([*common, "latest", "--limit", "1"]) == 0
@@ -162,6 +165,71 @@ def test_check_dry_run_prints_complete_report(
     assert "Checked: 1" in caplog.text
     assert "Would notify: 1" in caplog.text
     assert "Skipped: 0" in caplog.text
+
+
+def test_check_verbose_prints_notification_decision_and_summary(
+    tmp_path, caplog
+):
+    caplog.set_level(logging.INFO)
+    config = _config(tmp_path)
+    database = tmp_path / "verbose.db"
+    settings = _settings(tmp_path, database)
+
+    assert (
+        run(
+            [
+                "--products",
+                str(config),
+                "--settings",
+                str(settings),
+                "check",
+                "--verbose",
+            ]
+        )
+        == 0
+    )
+
+    assert "Product: Test Item" in caplog.text
+    assert "Store: fake" in caplog.text
+    assert "Current price: USD 75" in caplog.text
+    assert "Original price: USD 100" in caplog.text
+    assert "Discount: 25.00%" in caplog.text
+    assert "Notification: SKIPPED" in caplog.text
+    assert "Reason: Email notifications disabled" in caplog.text
+    assert "Skipped (configuration): 1" in caplog.text
+
+
+def test_check_summary_counts_product_errors(tmp_path, caplog):
+    caplog.set_level(logging.INFO)
+    config = tmp_path / "products.yaml"
+    config.write_text(
+        """
+products:
+  - name: Broken
+    stores:
+      fake:
+        url: fake://broken
+""",
+        encoding="utf-8",
+    )
+    settings = _settings(tmp_path, tmp_path / "errors.db")
+
+    assert (
+        run(
+            [
+                "--products",
+                str(config),
+                "--settings",
+                str(settings),
+                "check",
+            ]
+        )
+        == 0
+    )
+
+    assert "Products checked: 1" in caplog.text
+    assert "Successful checks: 0" in caplog.text
+    assert "Errors: 1" in caplog.text
 
 
 def test_send_test_email_skips_products_and_database(

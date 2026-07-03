@@ -12,6 +12,8 @@ LOGGER = logging.getLogger(__name__)
 class DryRunNotificationReporter:
     """Report notification decisions without sending or recording alerts."""
 
+    is_dry_run = True
+
     def __init__(
         self, storage: PriceStorage, email_settings: EmailSettings
     ) -> None:

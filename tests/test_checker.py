@@ -116,8 +116,12 @@ def test_checker_handles_network_error_without_parsing(tmp_path, caplog):
     )
     storage = PriceStorage(tmp_path / "prices.db")
     storage.initialize()
-    results = PriceChecker(
+    checker = PriceChecker(
         storage, {"fake": FakeAdapter()}, FailingHttpClient()
-    ).check(catalog)
+    )
+    results = checker.check(catalog)
     assert results == []
+    assert checker.last_stats.products_checked == 1
+    assert checker.last_stats.successful_checks == 0
+    assert checker.last_stats.errors == 1
     assert "connection timed out" in caplog.text
