@@ -1,5 +1,4 @@
 import logging
-import os
 from decimal import Decimal
 
 from price_tracker.database.storage import PriceStorage
@@ -62,26 +61,16 @@ class DryRunNotificationReporter:
         settings = self.email_settings
         if not settings.enabled:
             return "email is disabled"
-        missing_fields = [
-            name
-            for name, value in (
-                ("smtp_host", settings.smtp_host),
-                ("sender", settings.sender),
-                ("recipient", settings.recipient),
-            )
-            if not value
-        ]
-        if missing_fields:
-            return "missing " + ", ".join(missing_fields)
-        missing_environment = [
-            name
-            for name in (settings.username_env, settings.password_env)
-            if not os.environ.get(name)
-        ]
-        if missing_environment:
-            return "missing environment variables " + ", ".join(
-                missing_environment
-            )
+        if not settings.smtp_host:
+            return "missing smtp_host"
+        for value, variable in (
+            (settings.username, settings.username_env),
+            (settings.password, settings.password_env),
+            (settings.sender, settings.sender_env),
+            (settings.recipient, settings.recipient_env),
+        ):
+            if not value:
+                return f"missing environment variable {variable}"
         return None
 
     @staticmethod

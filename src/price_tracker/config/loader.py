@@ -1,3 +1,4 @@
+import os
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -67,37 +68,52 @@ def _load_email(raw: Any) -> EmailSettings:
     use_tls = raw.get("use_tls", True)
     if not isinstance(use_tls, bool):
         raise ConfigError("email.use_tls must be true or false")
-    settings = EmailSettings(
-        enabled=enabled,
-        smtp_host=_optional_string(raw.get("smtp_host"), "email.smtp_host"),
-        smtp_port=port,
-        username_env=(
+    smtp_host = _optional_string(raw.get("smtp_host"), "email.smtp_host")
+    if enabled and smtp_host is None:
+        raise ConfigError("email.smtp_host is required when email is enabled")
+    environment_names = {
+        "username": (
             _optional_string(raw.get("username_env"), "email.username_env")
             or "PRICE_TRACKER_EMAIL_USERNAME"
         ),
-        password_env=(
+        "password": (
             _optional_string(raw.get("password_env"), "email.password_env")
             or "PRICE_TRACKER_EMAIL_PASSWORD"
         ),
-        sender=_optional_string(raw.get("sender"), "email.sender"),
-        recipient=_optional_string(raw.get("recipient"), "email.recipient"),
+        "sender": (
+            _optional_string(raw.get("sender_env"), "email.sender_env")
+            or "PRICE_TRACKER_EMAIL_SENDER"
+        ),
+        "recipient": (
+            _optional_string(raw.get("recipient_env"), "email.recipient_env")
+            or "PRICE_TRACKER_EMAIL_RECIPIENT"
+        ),
+    }
+    resolved = {
+        field: os.environ.get(variable)
+        for field, variable in environment_names.items()
+    }
+    if enabled:
+        for field in ("username", "password", "sender", "recipient"):
+            if not resolved[field]:
+                raise ConfigError(
+                    "Missing environment variable:\n"
+                    f"{environment_names[field]}"
+                )
+    return EmailSettings(
+        enabled=enabled,
+        smtp_host=smtp_host,
+        smtp_port=port,
+        username_env=environment_names["username"],
+        password_env=environment_names["password"],
+        sender_env=environment_names["sender"],
+        recipient_env=environment_names["recipient"],
         use_tls=use_tls,
+        username=resolved["username"],
+        password=resolved["password"],
+        sender=resolved["sender"],
+        recipient=resolved["recipient"],
     )
-    if settings.enabled:
-        missing = [
-            name
-            for name, value in {
-                "smtp_host": settings.smtp_host,
-                "sender": settings.sender,
-                "recipient": settings.recipient,
-            }.items()
-            if value is None
-        ]
-        if missing:
-            raise ConfigError(
-                "email requires when enabled: " + ", ".join(missing)
-            )
-    return settings
 
 
 def load_settings(path: Path) -> ApplicationSettings:

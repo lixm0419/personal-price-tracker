@@ -3,11 +3,11 @@ database_path: data/prices.db
 logging_level: INFO
 
 email:
-  enabled: false
+  enabled: true
   smtp_host: smtp.gmail.com
   smtp_port: 587
+  use_tls: true
   username_env: PRICE_TRACKER_EMAIL_USERNAME
   password_env: PRICE_TRACKER_EMAIL_PASSWORD
-  sender: lixm0419@gmail.com
-  recipient: lixm0419@gmail.com
-  use_tls: true
+  sender_env: PRICE_TRACKER_EMAIL_SENDER
+  recipient_env: PRICE_TRACKER_EMAIL_RECIPIENT

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 
@@ -10,9 +10,13 @@ class EmailSettings:
     smtp_port: int = 587
     username_env: str = "PRICE_TRACKER_EMAIL_USERNAME"
     password_env: str = "PRICE_TRACKER_EMAIL_PASSWORD"
-    sender: str | None = None
-    recipient: str | None = None
+    sender_env: str = "PRICE_TRACKER_EMAIL_SENDER"
+    recipient_env: str = "PRICE_TRACKER_EMAIL_RECIPIENT"
     use_tls: bool = True
+    username: str | None = field(default=None, repr=False)
+    password: str | None = field(default=None, repr=False)
+    sender: str | None = field(default=None, repr=False)
+    recipient: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True, slots=True)

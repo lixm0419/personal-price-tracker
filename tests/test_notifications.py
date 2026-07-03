@@ -79,6 +79,8 @@ def test_email_contains_price_variant_url_and_tied_variants() -> None:
         EmailSettings(
             enabled=True,
             smtp_host="smtp.example.test",
+            username="user",
+            password="password",
             sender="alerts@example.test",
             recipient="shopper@example.test",
         )
@@ -94,6 +96,27 @@ def test_email_contains_price_variant_url_and_tied_variants() -> None:
     assert "Discount: 20%" in body
     assert "https://example.test/carrier?variant=1" in body
     assert "Tied lowest variants: Natural Beige" in body
+
+
+def test_test_email_has_expected_subject_and_body(monkeypatch) -> None:
+    alert = EmailAlert(
+        EmailSettings(
+            enabled=True,
+            smtp_host="smtp.example.test",
+            username="user",
+            password="password",
+            sender="alerts@example.test",
+            recipient="shopper@example.test",
+        )
+    )
+    sent = []
+    monkeypatch.setattr(alert, "_send_message", sent.append)
+
+    alert.send_test_email()
+
+    assert len(sent) == 1
+    assert sent[0]["Subject"] == "Price Tracker Test Email"
+    assert "SMTP configuration is working." in sent[0].get_content()
 
 
 def test_dry_run_reports_would_send_with_tied_variants(
@@ -118,6 +141,10 @@ def test_dry_run_reports_would_send_with_tied_variants(
             smtp_host="smtp.example.test",
             username_env="SMTP_USER",
             password_env="SMTP_PASSWORD",
+            sender_env="SMTP_SENDER",
+            recipient_env="SMTP_RECIPIENT",
+            username="user",
+            password="password",
             sender="alerts@example.test",
             recipient="shopper@example.test",
         ),

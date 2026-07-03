@@ -47,6 +47,10 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print qualifying notifications without sending email",
     )
+    subparsers.add_parser(
+        "send-test-email",
+        help="Send a test message using configured SMTP settings",
+    )
     subparsers.add_parser("list-products", help="List configured products")
     latest = subparsers.add_parser("latest", help="Show recent price checks")
     latest.add_argument("--limit", type=int, default=20)
@@ -69,11 +73,28 @@ def run(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         settings = load_settings(args.settings)
-        catalog = load_catalog(args.products)
     except ConfigError as exc:
         LOGGER.error("%s", exc)
         return 2
     logging.getLogger().setLevel(settings.logging_level)
+
+    if args.command == "send-test-email":
+        if not settings.email.enabled:
+            LOGGER.error("Email is disabled in settings")
+            return 2
+        try:
+            EmailAlert(settings.email).send_test_email()
+        except Exception as exc:
+            LOGGER.error("Test email failed: %s", exc)
+            return 1
+        LOGGER.info("Test email sent successfully")
+        return 0
+
+    try:
+        catalog = load_catalog(args.products)
+    except ConfigError as exc:
+        LOGGER.error("%s", exc)
+        return 2
 
     if args.command == "list-products":
         for product in catalog.products:

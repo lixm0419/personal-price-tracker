@@ -68,17 +68,23 @@ products:
         load_catalog(path)
 
 
-def test_load_settings_with_email_environment_names(tmp_path):
+def test_load_settings_with_email_environment_names(tmp_path, monkeypatch):
+    monkeypatch.setenv("SMTP_USER", "user")
+    monkeypatch.setenv("SMTP_PASSWORD", "password")
+    monkeypatch.setenv("SMTP_SENDER", "alerts@example.test")
+    monkeypatch.setenv("SMTP_RECIPIENT", "shopper@example.test")
     path = tmp_path / "settings.yaml"
     path.write_text(
         """
 database_path: custom/prices.db
 logging_level: debug
 email:
-  enabled: false
+  enabled: true
   smtp_host: smtp.example.com
   username_env: SMTP_USER
   password_env: SMTP_PASSWORD
+  sender_env: SMTP_SENDER
+  recipient_env: SMTP_RECIPIENT
 """,
         encoding="utf-8",
     )
@@ -90,6 +96,46 @@ email:
     assert settings.email.smtp_port == 587
     assert settings.email.username_env == "SMTP_USER"
     assert settings.email.password_env == "SMTP_PASSWORD"
+    assert settings.email.sender_env == "SMTP_SENDER"
+    assert settings.email.recipient_env == "SMTP_RECIPIENT"
+    assert settings.email.username == "user"
+    assert settings.email.password == "password"
+    assert settings.email.sender == "alerts@example.test"
+    assert settings.email.recipient == "shopper@example.test"
+
+
+def test_load_settings_names_exact_missing_environment_variable(
+    tmp_path, monkeypatch
+):
+    for name in (
+        "SMTP_USER",
+        "SMTP_PASSWORD",
+        "SMTP_SENDER",
+        "SMTP_RECIPIENT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("SMTP_USER", "user")
+    monkeypatch.setenv("SMTP_PASSWORD", "password")
+    monkeypatch.setenv("SMTP_SENDER", "alerts@example.test")
+    path = tmp_path / "settings.yaml"
+    path.write_text(
+        """
+email:
+  enabled: true
+  smtp_host: smtp.example.test
+  username_env: SMTP_USER
+  password_env: SMTP_PASSWORD
+  sender_env: SMTP_SENDER
+  recipient_env: SMTP_RECIPIENT
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match="Missing environment variable:\\nSMTP_RECIPIENT",
+    ):
+        load_settings(path)
 
 
 def test_load_settings_rejects_invalid_logging_level(tmp_path):

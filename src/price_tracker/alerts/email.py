@@ -1,4 +1,3 @@
-import os
 import smtplib
 from email.message import EmailMessage
 
@@ -17,25 +16,34 @@ class EmailAlert:
         self.settings = settings
 
     def send(self, price: PriceData, product: Product) -> None:
-        username = os.environ.get(self.settings.username_env)
-        password = os.environ.get(self.settings.password_env)
-        if not username or not password:
-            raise EmailConfigurationError(
-                "Missing email credentials in environment variables "
-                f"{self.settings.username_env} and {self.settings.password_env}"
-            )
+        self._send_message(self._message(price, product))
+
+    def send_test_email(self) -> None:
+        message = EmailMessage()
+        message["Subject"] = "Price Tracker Test Email"
+        message["From"] = self.settings.sender
+        message["To"] = self.settings.recipient
+        message.set_content("SMTP configuration is working.")
+        self._send_message(message)
+
+    def _send_message(self, message: EmailMessage) -> None:
         if not all(
-            (self.settings.smtp_host, self.settings.sender, self.settings.recipient)
+            (
+                self.settings.smtp_host,
+                self.settings.username,
+                self.settings.password,
+                self.settings.sender,
+                self.settings.recipient,
+            )
         ):
             raise EmailConfigurationError("Email settings are incomplete")
 
-        message = self._message(price, product)
         with smtplib.SMTP(
             self.settings.smtp_host, self.settings.smtp_port, timeout=30
         ) as smtp:
             if self.settings.use_tls:
                 smtp.starttls()
-            smtp.login(username, password)
+            smtp.login(self.settings.username, self.settings.password)
             smtp.send_message(message)
 
     def _message(self, price: PriceData, product: Product) -> EmailMessage:

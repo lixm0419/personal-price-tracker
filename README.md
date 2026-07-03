@@ -105,33 +105,72 @@ item under `products` with at least `name` and a non-empty `stores` mapping.
 
 ## Email notifications
 
-Enable email in `config/settings.yaml` and provide the SMTP host, sender, and
-recipient. Keep credentials out of YAML; the `username_env` and `password_env`
-values name the environment variables the application will read:
+Keep only SMTP behavior and environment-variable names in
+`config/settings.yaml`. Credentials, sender, and recipient are resolved from
+the process environment when configuration is loaded:
 
 ```yaml
 email:
   enabled: true
   smtp_host: smtp.example.com
   smtp_port: 587
+  use_tls: true
   username_env: PRICE_TRACKER_EMAIL_USERNAME
   password_env: PRICE_TRACKER_EMAIL_PASSWORD
-  sender: alerts@example.com
-  recipient: you@example.com
-  use_tls: true
+  sender_env: PRICE_TRACKER_EMAIL_SENDER
+  recipient_env: PRICE_TRACKER_EMAIL_RECIPIENT
 ```
 
-Set the credentials in PowerShell before running a check:
+If email is enabled, all four named variables are required. Configuration
+loading reports the exact missing variable without displaying secret values.
+
+### Local development on Windows
+
+Copy `.env.example` as a reference, then set the variables in the PowerShell
+process that will run the tracker:
 
 ```powershell
 $env:PRICE_TRACKER_EMAIL_USERNAME = "your-smtp-username"
 $env:PRICE_TRACKER_EMAIL_PASSWORD = "your-smtp-password"
+$env:PRICE_TRACKER_EMAIL_SENDER = "alerts@example.com"
+$env:PRICE_TRACKER_EMAIL_RECIPIENT = "you@example.com"
 python -m price_tracker check
 ```
 
 `.env.example` documents the expected names, but the application deliberately
-does not load `.env` files. Export them in the process environment or configure
-them as encrypted CI secrets. `.env` is ignored by Git.
+does not load `.env` files. `.env` is ignored by Git. For persistent Windows
+user variables, use `setx NAME "value"` and open a new terminal afterward.
+
+### GitHub Actions Secrets
+
+Create repository or environment secrets named
+`PRICE_TRACKER_EMAIL_USERNAME`, `PRICE_TRACKER_EMAIL_PASSWORD`,
+`PRICE_TRACKER_EMAIL_SENDER`, and `PRICE_TRACKER_EMAIL_RECIPIENT`. Map them into
+the check step's environment:
+
+```yaml
+- name: Check prices
+  run: python -m price_tracker check
+  env:
+    PRICE_TRACKER_EMAIL_USERNAME: ${{ secrets.PRICE_TRACKER_EMAIL_USERNAME }}
+    PRICE_TRACKER_EMAIL_PASSWORD: ${{ secrets.PRICE_TRACKER_EMAIL_PASSWORD }}
+    PRICE_TRACKER_EMAIL_SENDER: ${{ secrets.PRICE_TRACKER_EMAIL_SENDER }}
+    PRICE_TRACKER_EMAIL_RECIPIENT: ${{ secrets.PRICE_TRACKER_EMAIL_RECIPIENT }}
+```
+
+Future deployment platforms should configure the same four names through their
+secret/environment management facility rather than committing values to YAML.
+
+Verify SMTP credentials, TLS, sender, and recipient without running product
+checks or opening the SQLite database:
+
+```powershell
+python -m price_tracker send-test-email
+```
+
+The test message uses subject `Price Tracker Test Email` and body
+`SMTP configuration is working.` Email must be enabled and all configured
+environment variables must be present.
 
 Notifications are sent only when a product's discount meets its configured
 threshold (or the global default). A successful alert is recorded in SQLite,
@@ -167,6 +206,7 @@ alias for `--products`. The database path comes from settings unless
 ```powershell
 price-tracker list-products
 price-tracker check
+price-tracker send-test-email
 price-tracker latest
 price-tracker latest --limit 5
 price-tracker --products other-products.yaml --settings other-settings.yaml check

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from price_tracker.cli import _describe, run
+from price_tracker.alerts.email import EmailAlert
 from price_tracker.models.price import PriceData
 
 
@@ -36,8 +37,8 @@ logging_level: INFO
 email:
   enabled: {str(email_enabled).lower()}
   smtp_host: smtp.example.test
-  sender: alerts@example.test
-  recipient: shopper@example.test
+  sender_env: PRICE_TRACKER_EMAIL_SENDER
+  recipient_env: PRICE_TRACKER_EMAIL_RECIPIENT
 """,
         encoding="utf-8",
     )
@@ -126,6 +127,10 @@ def test_check_dry_run_prints_complete_report(
     caplog.set_level(logging.INFO)
     monkeypatch.setenv("PRICE_TRACKER_EMAIL_USERNAME", "user")
     monkeypatch.setenv("PRICE_TRACKER_EMAIL_PASSWORD", "password")
+    monkeypatch.setenv("PRICE_TRACKER_EMAIL_SENDER", "alerts@example.test")
+    monkeypatch.setenv(
+        "PRICE_TRACKER_EMAIL_RECIPIENT", "shopper@example.test"
+    )
     config = _config(tmp_path)
     database = tmp_path / "dry-run.db"
     settings = _settings(tmp_path, database, email_enabled=True)
@@ -157,3 +162,40 @@ def test_check_dry_run_prints_complete_report(
     assert "Checked: 1" in caplog.text
     assert "Would notify: 1" in caplog.text
     assert "Skipped: 0" in caplog.text
+
+
+def test_send_test_email_skips_products_and_database(
+    tmp_path, caplog, monkeypatch
+):
+    caplog.set_level(logging.INFO)
+    monkeypatch.setenv("PRICE_TRACKER_EMAIL_USERNAME", "user")
+    monkeypatch.setenv("PRICE_TRACKER_EMAIL_PASSWORD", "password")
+    monkeypatch.setenv("PRICE_TRACKER_EMAIL_SENDER", "alerts@example.test")
+    monkeypatch.setenv(
+        "PRICE_TRACKER_EMAIL_RECIPIENT", "shopper@example.test"
+    )
+    database = tmp_path / "must-not-exist.db"
+    settings = _settings(tmp_path, database, email_enabled=True)
+    sent = []
+    monkeypatch.setattr(
+        EmailAlert,
+        "send_test_email",
+        lambda self: sent.append(self.settings.recipient),
+    )
+
+    assert (
+        run(
+            [
+                "--products",
+                str(tmp_path / "missing-products.yaml"),
+                "--settings",
+                str(settings),
+                "send-test-email",
+            ]
+        )
+        == 0
+    )
+
+    assert sent == ["shopper@example.test"]
+    assert "Test email sent successfully" in caplog.text
+    assert not database.exists()
