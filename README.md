@@ -145,18 +145,19 @@ user variables, use `setx NAME "value"` and open a new terminal afterward.
 
 Create repository or environment secrets named
 `PRICE_TRACKER_EMAIL_USERNAME`, `PRICE_TRACKER_EMAIL_PASSWORD`,
-`PRICE_TRACKER_EMAIL_SENDER`, and `PRICE_TRACKER_EMAIL_RECIPIENT`. Map them into
-the check step's environment:
+`PRICE_TRACKER_EMAIL_SENDER`, and `PRICE_TRACKER_EMAIL_RECIPIENT` under
+**Settings → Secrets and variables → Actions → New repository secret**. Secret
+values are never stored in the workflow or repository.
 
-```yaml
-- name: Check prices
-  run: python -m price_tracker check
-  env:
-    PRICE_TRACKER_EMAIL_USERNAME: ${{ secrets.PRICE_TRACKER_EMAIL_USERNAME }}
-    PRICE_TRACKER_EMAIL_PASSWORD: ${{ secrets.PRICE_TRACKER_EMAIL_PASSWORD }}
-    PRICE_TRACKER_EMAIL_SENDER: ${{ secrets.PRICE_TRACKER_EMAIL_SENDER }}
-    PRICE_TRACKER_EMAIL_RECIPIENT: ${{ secrets.PRICE_TRACKER_EMAIL_RECIPIENT }}
-```
+`.github/workflows/scheduled-price-check.yml` runs once daily at 12:17 UTC and
+can also be started manually from the Actions tab. It installs the package,
+restores the SQLite history cache, and runs `python -m price_tracker check`
+with those four secrets mapped into the process environment. The history cache
+preserves duplicate-notification state between ephemeral Actions runners.
+
+To send scheduled alerts, set `email.enabled: true` in
+`config/settings.yaml`. Leave it false if the workflow should record checks
+without sending email.
 
 Future deployment platforms should configure the same four names through their
 secret/environment management facility rather than committing values to YAML.

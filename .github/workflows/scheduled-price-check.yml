@@ -1,0 +1,47 @@
+name: Scheduled price check
+
+on:
+  schedule:
+    - cron: "17 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-price-check
+  cancel-in-progress: false
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install package
+        run: python -m pip install .
+
+      - name: Restore price and notification history
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: price-tracker-data-${{ github.run_id }}
+          restore-keys: |
+            price-tracker-data-
+
+      - name: Check prices
+        run: python -m price_tracker check
+        env:
+          PRICE_TRACKER_EMAIL_USERNAME: ${{ secrets.PRICE_TRACKER_EMAIL_USERNAME }}
+          PRICE_TRACKER_EMAIL_PASSWORD: ${{ secrets.PRICE_TRACKER_EMAIL_PASSWORD }}
+          PRICE_TRACKER_EMAIL_SENDER: ${{ secrets.PRICE_TRACKER_EMAIL_SENDER }}
+          PRICE_TRACKER_EMAIL_RECIPIENT: ${{ secrets.PRICE_TRACKER_EMAIL_RECIPIENT }}
